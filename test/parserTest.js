@@ -1,5 +1,5 @@
 
-import { parseFeatureFile } from '../src/utils/featureParser.js';
+import { parseFeatureFile, convertParsedDataToSheetData } from '../src/utils/featureParser.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -16,23 +16,48 @@ try {
     // Check first row
     if (result.length > 0) {
         console.log("First Row Sample:", JSON.stringify(result[0], null, 2));
-        if (result[0].SheetName && result[0].Parameters) {
-            console.log("SUCCESS: SheetName and Parameters present.");
-        } else {
-            console.log("FAILURE: Missing SheetName or Parameters.");
-        }
     }
 
-    // Check if we have multiple rows (we expect fewer rows now as we aggregate)
-    const count = result.length;
-    console.log(`Total Scenarios Parsed: ${count}`);
+    console.log("---------------------------------------------------");
+    console.log("Testing Sheet Conversion Logic...");
+    const sheets = convertParsedDataToSheetData(result);
+    console.log(`Generated ${sheets.length} sheets.`);
 
-    // Verify aggregation check on first row if it has params
-    if (result[0].Parameters && Object.values(result[0].Parameters).some(v => v.includes('|'))) {
-        console.log("SUCCESS: Parameters aggregated with pipe.");
-    } else if (result[0].Parameters) {
-        // Might be single example, so no pipe.
-        console.log("INFO: Parameters present, possibly single example.");
+    if (sheets.length > 0) {
+        const firstSheet = sheets[0];
+        console.log(`First Sheet Name: ${firstSheet.name}`);
+        console.log(`First Sheet Rows: ${firstSheet.data.length}`);
+
+        // Validation
+        const headers = firstSheet.data[0];
+        if (headers[1] === "Step Name (Design Steps)" && headers[5] === "Test input (Design Steps)") {
+            console.log("SUCCESS: Headers verified.");
+        } else {
+            console.log("FAILURE: Headers mismatch.");
+            console.log("Headers Found:", headers);
+        }
+
+        // Check content (Sample row)
+        if (firstSheet.data.length > 1) {
+            const firstRow = firstSheet.data[1];
+            console.log("First Data Row:", firstRow);
+
+            // Verify ALM Fields
+            if (firstRow[6] === "Flamingo\\Full Disclosure\\SSVP\\COMMON\\Automation" &&
+                firstRow[8] === "VAPI-XP-TEST" &&
+                firstRow[9] === "Design" &&
+                firstRow[10] === "qcadmin") {
+                console.log("SUCCESS: ALM Default Fields verified.");
+            } else {
+                console.log("FAILURE: ALM Default Fields mismatch.");
+                console.log("Subject:", firstRow[6]);
+                console.log("Type:", firstRow[8]);
+                console.log("Status:", firstRow[9]);
+                console.log("Designer:", firstRow[10]);
+            }
+        }
+    } else {
+        console.log("FAILURE: No sheets generated.");
     }
 
 
