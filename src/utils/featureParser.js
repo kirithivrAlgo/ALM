@@ -174,6 +174,7 @@ export function convertParsedDataToSheetData(data) {
         if (item.Steps) {
             const stepsArray = item.Steps.split('\n');
 
+            let lastExplicitKeyword = "";
             stepsArray.forEach((step, stepIndex) => {
                 if (!step.trim()) return;
 
@@ -190,8 +191,13 @@ export function convertParsedDataToSheetData(data) {
                     gwt = match[2]; // e.g. "Given"
                     description = match[3];
                     expected = "No expected result required for this step";
+
+                    if (["Given", "When", "Then"].includes(gwt)) {
+                        lastExplicitKeyword = gwt;
+                    }
                 }
-                if (gwt === "Then" && description.startsWith("verify") || gwt === "And" && description.startsWith("verify")) {
+
+                if (gwt === "Then" || (["And"].includes(gwt) && lastExplicitKeyword === "Then")) {
                     expected = description;
                     description = "";
                 }
